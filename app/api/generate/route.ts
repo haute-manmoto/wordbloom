@@ -17,13 +17,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "invalid input" }, { status: 400 });
     }
 
-    // 🔑 環境変数が無い場合はフロントのローカル生成に任せる
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ lines: [] }, { status: 200 });
+      const mock = Array.from({ length: 30 }, (_, i) => `${word}の余韻 ${i + 1}`);
+      return NextResponse.json({ lines: mock }, { status: 200 });
     }
 
-    // クライアントは関数内部で生成（ビルド時に例外を出さない）
     const client = new OpenAI({ apiKey });
 
     const sys =
@@ -36,24 +35,27 @@ export async function POST(req: Request) {
         ? `単語: ${word}\n条件: 100行/短文/改行区切り/重複禁止/連想中心。`
         : `Seed: ${word}\nRules: 100 lines / short / newline-separated / no duplicates / associative`;
 
-    const r = await client.responses.create({
+    // ✅ Chat Completions API を使用（responsesではなくこちら）
+    const r = await client.chat.completions.create({
       model: "gpt-4o-mini",
-      input: [
+      temperature: 0.9,
+      messages: [
         { role: "system", content: sys },
         { role: "user", content: user },
       ],
     });
 
-    const raw = (r as any).output_text as string;
+    // Chat Completions から本文を取得
+    const raw = r.choices?.[0]?.message?.content ?? "";
     const lines = parse100(raw, count, language, minLen, maxLen);
     return NextResponse.json({ lines });
   } catch (err) {
-    // APIエラー時もフロント側フォールバックに任せる
     console.error(err);
     return NextResponse.json({ lines: [] }, { status: 200 });
   }
 }
 
+// 文字列を100行パースする補助関数群
 function parse100(text: string, want: number, lang: string, minLen: number, maxLen: number): string[] {
   if (!text) return [];
   const rows = text

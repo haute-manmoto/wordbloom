@@ -109,3 +109,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* 末尾に追加 */
+@keyframes caret-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.caret-blink {
+  animation: caret-blink 1s steps(1, end) infinite;
+}
+
+
+
+
+html, body { overflow-x: hidden; }         /* 全体の横スク禁止 */
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }

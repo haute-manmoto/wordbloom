@@ -1,61 +1,22 @@
-import "./globals.css";
+// app/layout.tsx
 import type { Metadata } from "next";
+import "./globals.css";
+import { Zen_Kaku_Gothic_New } from "next/font/google";
 
-// 🎨 Google Fonts Import
-import {
-  Noto_Sans_JP,
-  Noto_Serif_JP,
-  Zen_Maru_Gothic,
-  Shippori_Mincho,
-  Kosugi_Maru,
-  Inter,
-} from "next/font/google";
-
-const notoSans = Noto_Sans_JP({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-noto-sans",
-  display: "swap",
-});
-
-const notoSerif = Noto_Serif_JP({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-noto-serif",
-  display: "swap",
-});
-
-const zenMaru = Zen_Maru_Gothic({
-  subsets: ["latin"],
-  weight: ["300", "400", "700"],
-  variable: "--font-zen-maru",
-  display: "swap",
-});
-
-const shippori = Shippori_Mincho({
+const zenKaku = Zen_Kaku_Gothic_New({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-shippori",
-  display: "swap",
-});
-
-const kosugi = Kosugi_Maru({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-kosugi",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  variable: "--font-zenkaku",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "WordBloom — Copywriter Prototype",
-  description: "1ワードから100の言葉を生み出す、AIコピーライター。",
+  title: "ひとこと",
+  description: "ひとつの言葉から、100のひらめきを。",
+  metadataBase:
+    typeof process !== "undefined" && process.env.VERCEL_URL
+      ? new URL(`https://${process.env.VERCEL_URL}`)
+      : undefined,
 };
 
 export default function RootLayout({
@@ -63,17 +24,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
-      <body
-        className={`
-          ${notoSans.variable}
-          ${notoSerif.variable}
-          ${zenMaru.variable}
-          ${shippori.variable}
-          ${kosugi.variable}
-          ${inter.variable}
-          bg-neutral-950 text-neutral-100 antialiased
-        `}
-      >
+      <body className={`${zenKaku.variable} bg-neutral-950 text-neutral-100 antialiased`}>
         {children}
       </body>
     </html>

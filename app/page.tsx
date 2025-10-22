@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { classifyTone, fontMap, type FontKey } from "../components/FontMap";
 
 /** 助詞・接続語（軽量レンダリング） */
@@ -60,6 +60,40 @@ function renderLineStylized(textRaw: string): React.ReactNode[] {
   return out;
 }
 
+/* ================================
+   タイトル用タイプライター・フック
+   ================================ */
+function useTypewriter(initial = "ひとこと") {
+  const [titleTarget, setTitleTarget] = useState<string>(initial);
+  const [titleShown, setTitleShown] = useState<string>("");
+  const [isTyping, setIsTyping] = useState<boolean>(true);
+  const [cursorOn, setCursorOn] = useState<boolean>(true);
+
+  // カーソル点滅
+  useEffect(() => {
+    const blink = setInterval(() => setCursorOn((v) => !v), 500);
+    return () => clearInterval(blink);
+  }, []);
+
+  // 目標文言が変わるたびタイプ開始
+  useEffect(() => {
+    setIsTyping(true);
+    setTitleShown("");
+    let i = 0;
+    const iv = setInterval(() => {
+      setTitleShown(titleTarget.slice(0, i + 1));
+      i++;
+      if (i >= titleTarget.length) {
+        clearInterval(iv);
+        setIsTyping(false);
+      }
+    }, 90); // ← 速度調整
+    return () => clearInterval(iv);
+  }, [titleTarget]);
+
+  return { titleTarget, setTitleTarget, titleShown, isTyping, cursorOn };
+}
+
 export default function Page() {
   const [word, setWord] = useState("");
   const [results, setResults] = useState<string[]>([]);
@@ -72,38 +106,81 @@ export default function Page() {
 
   const showControls = results.length > 0;
 
+  // タイプライター（タイトル）
+  const { titleTarget, setTitleTarget, titleShown, isTyping, cursorOn } = useTypewriter("ひとこと");
+
+  // 「言葉を生成」クリック → 連想した3段階リアクション → 結果取得
   async function onGenerate() {
-    if (!word.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word }),
-      });
-      if (!res.ok) throw new Error("Failed to generate");
-      const data = await res.json();
-      setResults(Array.isArray(data.lines) ? data.lines : []);
-    } catch (err) {
-      console.error(err);
-      alert("生成に失敗しました。サーバーを確認してください。");
-    } finally {
-      setLoading(false);
-    }
+  if (!word.trim()) return;
+
+  setLoading(true);
+
+  // wait/offer だけを取得（praise は使わない）
+  let rx = { wait: "考え中", offer: "どうかな？" };
+  try {
+    const rr = await fetch("/api/react", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ word }),
+    });
+    if (rr.ok) rx = await rr.json();
+  } catch {}
+
+  setTitleTarget(rx.wait);
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ word }),
+    });
+    if (!res.ok) throw new Error("Failed to generate");
+    const data = await res.json();
+    setResults(Array.isArray(data.lines) ? data.lines : []);
+    setTitleTarget(rx.offer);
+  } catch (err) {
+    console.error(err);
+    setTitleTarget("あれ？もう一度いい？");
+    alert("生成に失敗しました。サーバーを確認してください。");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
-    <main
-      className={`min-h-screen bg-neutral-950 text-neutral-100 flex flex-col items-center p-6 ${
-        showControls ? "" : "justify-center"
-      }`}
-    >
+   <main
+  className={`min-h-screen w-full overflow-x-hidden bg-neutral-950 text-neutral-100 flex flex-col items-center p-6 ${
+    showControls ? "" : "justify-center"
+  }`}
+>
       <div className="w-full max-w-3xl text-center">
-        {/* タイトル */}
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-          WordBloom <span className="text-neutral-400">— 1→100 Copywriter</span>
-        </h1>
-        <p className="text-neutral-400 mt-2">ワードを入力して「100語を生成」を押すだけ。</p>
+        {/* タイトル（タイプライター） */}
+        <h1
+  className={`text-6xl sm:text-7xl md:text-8xl font-bold tracking-tight relative inline-flex items-center justify-center transition-all ${
+    titleTarget === "どうかな？" ? "mt-12 mb-8" : "mt-0 mb-8"
+  }`}
+  aria-label={titleTarget || "ひとこと"}
+>
+  <span>{titleShown}</span>
+  <span
+    aria-hidden
+    className="ml-1 inline-block align-middle"
+    style={{
+      width: "0.2ch",
+      height: "1em",
+      backgroundColor: cursorOn ? "rgba(226,232,240,1)" : "transparent",
+      transition: "background-color 80ms linear",
+    }}
+  />
+</h1>
+
+
+
+
+        <p className="text-neutral-400 mt-2 text-sm">
+          ひとつの言葉から、100のことばを。
+        </p>
 
         {/* 入力 */}
         <div className="mt-6 flex gap-2">
@@ -119,7 +196,7 @@ export default function Page() {
             disabled={!word || loading}
             className="px-5 py-3 rounded-xl bg-white text-neutral-900 font-medium disabled:opacity-50"
           >
-            {loading ? "生成中…" : "100語を生成"}
+            {loading ? "生成中…" : "言葉を生成"}
           </button>
         </div>
 
@@ -140,44 +217,65 @@ export default function Page() {
           </div>
         )}
 
-        {/* 結果 */}
-        {results.length > 0 && (
-          <div className="mt-8 grid gap-3">
-            {results.map((raw, i) => {
-              const line = normalizePunct(raw);
-              const toneKey: FontKey = classifyTone(line);
-              const tone = fontMap[toneKey];
+{/* 結果 */}
+{results.length > 0 && (
+  <div className="mt-8 grid gap-3 w-full">
+    {results.map((raw, i) => {
+      const line = normalizePunct(raw);
+      const toneKey: FontKey = classifyTone(line);
+      const tone = fontMap[toneKey];
 
-              return (
-                <div
-                  key={i}
-                  className="line-card fade-up"
-                  style={{ animationDelay: `${Math.min(i, 40) * 25}ms` }} // 最大1s弱
-                >
-                  <div className={`flex items-start gap-3 ${tone.class}`}>
-                    <span className="text-neutral-500 text-xs w-6 text-right mt-1">
-                      {i + 1}
-                    </span>
-                    <p
-  className="jp-typeset tracking-wide"
-  style={{
-    fontSize: fontSize,                 // ← 修正：数値でOK
-    letterSpacing: tone.tracking,
-    lineHeight: tone.leading,
-    fontWeight: tone.weight,
-    textTransform: tone.transform,
-    fontStyle: tone.italic ? "italic" : "normal",
-    fontFamily: tone.name,
-  }}
->
-  {renderLineStylized(line)}
-</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      return (
+        <div
+          key={i}
+          className="fade-up"
+          style={{ animationDelay: `${Math.min(i, 40) * 25}ms` }}
+        >
+          {/* 角丸＆背景。ここで丸ごとクリップ */}
+          <div className="rounded-2xl ring-1 ring-neutral-800/50 bg-neutral-900/70 shadow-[0_0_0_1px_rgba(255,255,255,0.02)_inset] overflow-hidden max-w-full">
+  {/* ビューポート（カード単位で横スク） */}
+  <div
+    className="
+      relative overflow-x-auto max-w-full
+      [overscroll-behavior-x:contain] [touch-action:pan-x] [-webkit-overflow-scrolling:touch]
+      scrollbar-none
+    "
+  >
+    {/* 横に長い面（中身） */}
+    <div className="inline-flex items-start gap-3 w-max min-w-[115%] pr-10 pl-4 py-4">
+      <span className="text-neutral-500 text-xs w-6 text-right mt-1 shrink-0">{i + 1}</span>
+      <p
+        className="jp-typeset tracking-wide whitespace-nowrap"
+        style={{
+          fontSize: fontSize,
+          letterSpacing: tone.tracking,
+          lineHeight: tone.leading,
+          fontWeight: tone.weight,
+          textTransform: tone.transform,
+          fontStyle: tone.italic ? "italic" : "normal",
+          fontFamily: tone.name,
+        }}
+      >
+        {renderLineStylized(line)}
+      </p>
+    </div>
+
+    {/* 端フェード（任意） */}
+    <span className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-neutral-900/80 to-transparent" />
+    <span className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-neutral-900/80 to-transparent" />
+  </div>
+</div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+
+
+
+
+
       </div>
     </main>
   );
