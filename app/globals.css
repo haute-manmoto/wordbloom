@@ -1,3 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=BIZ+UDGothic&family=M+PLUS+Rounded+1c:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=Shippori+Mincho:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
+
+.font-strong { font-family: 'BIZ UDGothic', sans-serif; font-weight: 700; }
+.font-gentle { font-family: 'Noto Sans JP', sans-serif; font-weight: 400; }
+.font-poetic { font-family: 'Shippori Mincho', serif; font-weight: 400; }
+.font-calm { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 400; }
+.font-humor { font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 500; }
+.font-human { font-family: 'Noto Serif JP', serif; font-weight: 500; }
+
+:root {
+  --font-noto-sans: "Noto Sans JP", sans-serif;
+  --font-noto-serif: "Noto Serif JP", serif;
+  --font-zen-maru: "Zen Maru Gothic", sans-serif;
+  --font-shippori: "Shippori Mincho", serif;
+  --font-kosugi: "Kosugi Maru", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* --- 日本語タイポグラフィの基本 --- */
+@layer base {
+  :root {
+    /* 既に layout.tsx でフォント変数は定義済み */
+  }
+  html, body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* すでにある @tailwind の宣言はそのまま */
+
+/* 日本語向けの組版セット */
+@layer utilities {
+  .jp-typeset {
+    /* プロポーショナル仮名（対応フォントのみ）、合字やカーニング */
+    font-feature-settings: "palt", "kern", "liga";
+    /* 段落の最適バランス（対応ブラウザで行頭・行末のラグを軽減） */
+    text-wrap: balance;
+    /* 禁則寄りの改行ルール */
+    line-break: strict;
+    word-break: keep-all;
+  }
+
+  /* キーワード強調（わずかなスケールと詰めで“立てる”） */
+  .kw {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transform: translateY(-0.5px);
+  }
+  .kw-1 { font-size: 1.06em; }
+  .kw-2 { font-size: 1.10em; }
+
+  /* 助詞/接続語の軽量表現（opacityは使わない） */
+  .prt { font-size: 0.92em; font-weight: 300; }
+  .cnj { font-size: 0.95em; font-weight: 300; letter-spacing: 0.01em; }
+
+  /* 行カードの最小装飾（枠色は据え置き） */
+  .line-card { @apply p-4 rounded-2xl bg-neutral-900/60 ring-1 ring-neutral-800; }
+
+  /* フェードアップ（過剰でない速度） */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up {
+    animation: fadeUp 360ms ease-out both;
+  }
+
+  /* アニメが苦手な方への配慮 */
+  @media (prefers-reduced-motion: reduce) {
+    .fade-up { animation: none !important; }
+  }
+}
+
+
+
 @import "tailwindcss";
 
 :root {
@@ -24,3 +108,4 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
